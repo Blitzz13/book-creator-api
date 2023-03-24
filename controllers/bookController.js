@@ -20,8 +20,7 @@ const getBook = async (req, res) => {
     }
 
     try {
-        const book = await Book.findById(id).sort({ createdAt: -1 });
-
+        const book = await Book.findById(id);
 
         if (!book) {
             return res.status(404).json({ error: "Book not found" });
@@ -35,7 +34,7 @@ const getBook = async (req, res) => {
 
 // create book
 const createBook = async (req, res) => {
-    const { coverImage, genre, title, author, chapters } = req.body;
+    const { coverImage, genre, title, author } = req.body;
 
     try {
         const book = await Book.create({
@@ -43,7 +42,6 @@ const createBook = async (req, res) => {
             genre,
             title,
             author,
-            chapters
         });
         return res.status(200).json(book);
     } catch (error) {
@@ -86,7 +84,7 @@ const updateBook = async (req, res) => {
         });
 
         if (!book) {
-            return res.status(404).json({ error: "Book not found" });
+            return res.status(404).json({ error: "Chapter not found" });
         }
 
         return res.status(200).json(book);
@@ -100,5 +98,5 @@ module.exports = {
     getBook,
     createBook,
     deleteBook,
-    updateBook
+    updateBook,
 }

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const chapterModel = require("../models/chapterModel");
 
 const Schema = mongoose.Schema;
 
@@ -20,8 +21,8 @@ const bookSchema = new Schema({
     },
     chapters: {
         type: [{
-            Header: String,
-            Content: String,
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Chapter",
         }],
     },
 }, { timestamps: true });
