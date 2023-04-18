@@ -1,30 +1,52 @@
 const mongoose = require("mongoose");
-const chapterModel = require("../models/chapterModel");
+const { BookState } = require("../enums/BookState");
+// import {BookState} from "../enums/BookState";
 
 const Schema = mongoose.Schema;
 
-const bookSchema = new Schema({
+const bookSchema = new Schema(
+  {
     coverImage: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
+    },
+    backCoverImage: {
+      type: String,
     },
     genre: {
-        type: [String]
+      type: [String],
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    state: {
+      type: String,
+      enum: Object.values(BookState),
+      default: BookState.Draft,
+      required: true,
     },
     title: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
     author: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
+    },
+    rating: {
+      type: Number,
     },
     chapters: {
-        type: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Chapter",
-        }],
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Chapter",
+        },
+      ],
     },
-}, { timestamps: true });
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Book", bookSchema);
