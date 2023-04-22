@@ -1,4 +1,5 @@
 const Book = require("../models/bookModel");
+const User = require("../models/userModel");
 const mongoose = require("mongoose");
 
 // get all books
@@ -38,7 +39,7 @@ const createBook = async (req, res) => {
     coverImage,
     genre,
     title,
-    author,
+    authorId,
     backCoverImage,
     state,
     rating,
@@ -46,16 +47,26 @@ const createBook = async (req, res) => {
   } = req.body;
 
   try {
+    const user = await User.findById(authorId);
+    if (mongoose.isValidObjectId({ _id: authorId }) || !user) {
+      throw new Error(`Invalid author id ${authorId}`);
+    }
+
     const book = await Book.create({
       coverImage,
       genre,
       title,
-      author,
+      author: user.displayName,
+      authorId,
       backCoverImage,
       state,
       rating,
       description,
     });
+
+    user.books.push(book._id);
+    await user.save();
+
     return res.status(200).json(book);
   } catch (error) {
     return res.status(400).json({ error: error.message });
@@ -72,10 +83,14 @@ const deleteBook = async (req, res) => {
 
   try {
     const book = await Book.findOneAndDelete({ _id: id });
-
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
+
+    const user = await User.findById({ _id: book.authorId });
+    user.books.splice(user.books.indexOf(book._id), 1);
+
+    await user.save();
 
     return res.status(200).json(book);
   } catch (error) {
@@ -100,7 +115,7 @@ const updateBook = async (req, res) => {
     );
 
     if (!book) {
-      return res.status(404).json({ error: "Chapter not found" });
+      return res.status(404).json({ error: "Book not found" });
     }
 
     return res.status(200).json(book);
