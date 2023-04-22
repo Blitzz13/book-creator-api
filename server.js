@@ -4,6 +4,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bookRoutes = require("./routes/books");
 const chapterRoutes = require("./routes/chapters");
+const userRoutes = require("./routes/users");
 
 //Express app
 const app = express();
@@ -19,6 +20,7 @@ app.use((req, res, next) => {
 //Routes
 app.use("/api/books", bookRoutes);
 app.use("/api/chapters", chapterRoutes);
+app.use("/api/users", userRoutes);
 
 //Connect to DB
 mongoose.connect(process.env.MONGO_URI)

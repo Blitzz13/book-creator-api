@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const { BookState } = require("../enums/BookState");
-// import {BookState} from "../enums/BookState";
 
 const Schema = mongoose.Schema;
 
@@ -32,6 +31,11 @@ const bookSchema = new Schema(
     },
     author: {
       type: String,
+      required: true,
+    },
+    authorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
     rating: {
