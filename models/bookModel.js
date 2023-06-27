@@ -7,7 +7,6 @@ const bookSchema = new Schema(
   {
     coverImage: {
       type: String,
-      required: true,
     },
     backCoverImage: {
       type: String,
@@ -17,7 +16,6 @@ const bookSchema = new Schema(
     },
     description: {
       type: String,
-      required: true,
     },
     state: {
       type: String,
