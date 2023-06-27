@@ -113,8 +113,10 @@ const createChapter = async (req, res) => {
       .limit(1);
 
     let correctOrderId = orderId;
-    if (orderId < 1 || orderId > greatestOrderId.orderId + 1) {
+    if (greatestOrderId && (orderId < 1 || orderId > greatestOrderId.orderId + 1)) {
       correctOrderId = greatestOrderId.orderId + 1;
+    } else {
+      correctOrderId = 1;
     }
 
     const chapter = await Chapter.create({
@@ -143,7 +145,7 @@ const deleteChapter = async (req, res) => {
   try {
     const deletedChapter = await Chapter.findByIdAndDelete(id);
 
-    const hasChapter = Chapter.findOne({ bookId: deletedChapter.bookId });
+    const hasChapter = await Chapter.findOne({ bookId: deletedChapter.bookId });
 
     if (hasChapter) {
       const greatestOrderId = await Chapter.findOne(

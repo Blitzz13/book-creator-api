@@ -1,5 +1,6 @@
 const Book = require("../models/bookModel");
 const User = require("../models/userModel");
+const Chapter = require("../models/chapterModel");
 const mongoose = require("mongoose");
 
 // get all books
@@ -88,6 +89,7 @@ const deleteBook = async (req, res) => {
     }
 
     const user = await User.findById({ _id: book.authorId });
+    await Chapter.deleteMany({ bookId: book.id });
     user.books.splice(user.books.indexOf(book._id), 1);
 
     await user.save();
