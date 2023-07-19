@@ -5,12 +5,13 @@ const mongoose = require("mongoose");
 const bookRoutes = require("./routes/books");
 const chapterRoutes = require("./routes/chapters");
 const userRoutes = require("./routes/users");
+const noteRoutes = require("./routes/notes");
 
 //Express app
 const app = express();
 
 //Middleware
-app.use(express.json());
+app.use(express.json({limit: "10mb"}));
 
 app.use((req, res, next) => {
     console.log(req.path, req.method);
@@ -21,6 +22,7 @@ app.use((req, res, next) => {
 app.use("/api/books", bookRoutes);
 app.use("/api/chapters", chapterRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/notes", noteRoutes);
 
 //Connect to DB
 mongoose.connect(process.env.MONGO_URI)
@@ -31,7 +33,7 @@ mongoose.connect(process.env.MONGO_URI)
 
         app.listen(process.env.PORT, process.env.HOST_NAME, () =>{
             console.log(`Connected to DB and listening on ${process.env.HOST_NAME}:${process.env.PORT}`);
-        })
+        });
     })
     .catch((error) => {
         console.error(error)
