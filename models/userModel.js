@@ -32,6 +32,12 @@ const userSchema = new Schema(
         ref: "Book",
       },
     ],
+    favouriteBooks: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Book",
+      },
+    ],
   },
   { timestamps: true }
 );
