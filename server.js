@@ -31,9 +31,9 @@ mongoose.connect(process.env.MONGO_URI)
             console.log(`Connected to DB and listening localhost:${process.env.PORT}`);
         });
 
-        app.listen(process.env.PORT, process.env.HOST_NAME, () =>{
-            console.log(`Connected to DB and listening on ${process.env.HOST_NAME}:${process.env.PORT}`);
-        });
+        // app.listen(process.env.PORT, process.env.HOST_NAME, () =>{
+        //     console.log(`Connected to DB and listening on ${process.env.HOST_NAME}:${process.env.PORT}`);
+        // });
     })
     .catch((error) => {
         console.error(error)

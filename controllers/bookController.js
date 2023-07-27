@@ -13,6 +13,81 @@ const getBooks = async (req, res) => {
   }
 };
 
+// get search books count
+const returnSearchBooksCount = async (req, res) => {
+  const { title, authorName, searchString } = req.body;
+
+  try {
+    const filter = getSearchBookFilter(title, authorName, searchString);
+    const books = await Book.find(filter);
+    return res.status(200).json({ booksCount: books.length });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+// search books
+const searchBooks = async (req, res) => {
+  const { title, authorName, searchString, skip, take } = req.body;
+
+  try {
+    const filter = getSearchBookFilter(title, authorName, searchString);
+
+    const books = await Book.find(filter)
+      .skip(skip)
+      .limit(take)
+      .sort({ createdAt: -1 });
+    return res.status(200).json(books);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+const addToFavourites = async (req, res) => {
+  const { userId, bookId } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(404).json({ error: "Invalid user id" });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(bookId)) {
+    return res.status(404).json({ error: "Invalid book id" });
+  }
+
+  try {
+    const user = await User.findById(userId);
+
+    if (!user.favouriteBooks.includes(bookId)) {
+      user.favouriteBooks.push(bookId);
+    } else {
+      const index = user.favouriteBooks.indexOf(bookId);
+      user.favouriteBooks.splice(index, 1);
+    }
+
+    user.save();
+
+    return res.status(200).json("OK");
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+const getFavouriteBooks = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ error: "Invalid user id" });
+  }
+
+  try {
+    const user = await User.findById(id);
+
+    return res.status(200).json({ favouriteBookIds: user.favouriteBooks });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
 // get 1 book
 const getBook = async (req, res) => {
   const { id } = req.params;
@@ -126,10 +201,37 @@ const updateBook = async (req, res) => {
   }
 };
 
+function getSearchBookFilter(title, authorName, searchString) {
+  let filter = {};
+
+  if (!title && !authorName && searchString) {
+    filter = {
+      $or: [
+        { title: { $regex: searchString, $options: "i" } },
+        { author: { $regex: searchString, $options: "i" } },
+      ],
+    };
+  } else {
+    if (title) {
+      filter.title = { $regex: title, $options: "i" };
+    }
+
+    if (authorName) {
+      filter.author = { $regex: authorName, $options: "i" };
+    }
+  }
+
+  return filter;
+}
+
 module.exports = {
   getBooks,
   getBook,
+  getFavouriteBooks,
+  returnSearchBooksCount,
+  searchBooks,
   createBook,
   deleteBook,
   updateBook,
+  addToFavourites,
 };
