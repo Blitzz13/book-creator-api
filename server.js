@@ -6,12 +6,13 @@ const bookRoutes = require("./routes/books");
 const chapterRoutes = require("./routes/chapters");
 const userRoutes = require("./routes/users");
 const noteRoutes = require("./routes/notes");
+const User = require("./models/userModel");
 
 //Express app
 const app = express();
 
 //Middleware
-app.use(express.json({limit: "10mb"}));
+app.use(express.json({ limit: "10mb" }));
 
 app.use((req, res, next) => {
     console.log(req.path, req.method);
