@@ -9,6 +9,7 @@ const {
   returnSearchBooksCount,
   searchBooks,
   addToFavourites,
+  getFavouriteBooksIds,
   getFavouriteBooks,
 } = require("../controllers/bookController");
 const router = express.Router();
@@ -16,6 +17,8 @@ const router = express.Router();
 router.get("/", getBooks);
 
 router.get("/:id", getBook);
+
+router.get("/favourites-ids/:id", getFavouriteBooksIds);
 
 router.get("/favourites/:id", getFavouriteBooks);
 

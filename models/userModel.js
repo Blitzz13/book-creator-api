@@ -12,6 +12,12 @@ const userSchema = new Schema(
       required: true,
       unique: true,
     },
+    imageUrl: {
+      type: String,
+    },
+    description: {
+      type: String,
+    },
     displayName: {
       type: String,
       required: true,
@@ -38,6 +44,10 @@ const userSchema = new Schema(
         ref: "Book",
       },
     ],
+    settings: {
+      hideFavouriteBooks: { type: Boolean, default: false },
+      hideEmail: { type: Boolean, default: true },
+    }
   },
   { timestamps: true }
 );

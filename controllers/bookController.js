@@ -28,10 +28,10 @@ const returnSearchBooksCount = async (req, res) => {
 
 // search books
 const searchBooks = async (req, res) => {
-  const { title, authorName, searchString, skip, take } = req.body;
+  const { title, authorName, searchString, userId, skip, take } = req.body;
 
   try {
-    const filter = getSearchBookFilter(title, authorName, searchString);
+    const filter = getSearchBookFilter(title, authorName, searchString, userId);
 
     const books = await Book.find(filter)
       .skip(skip)
@@ -72,7 +72,7 @@ const addToFavourites = async (req, res) => {
   }
 };
 
-const getFavouriteBooks = async (req, res) => {
+const getFavouriteBooksIds = async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -83,6 +83,22 @@ const getFavouriteBooks = async (req, res) => {
     const user = await User.findById(id);
 
     return res.status(200).json({ favouriteBookIds: user.favouriteBooks });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+const getFavouriteBooks = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ error: "Invalid user id" });
+  }
+
+  try {
+    const user = await User.findById(id).populate("favouriteBooks");
+
+    return res.status(200).json(user.favouriteBooks);
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -201,10 +217,12 @@ const updateBook = async (req, res) => {
   }
 };
 
-function getSearchBookFilter(title, authorName, searchString) {
+function getSearchBookFilter(title, authorName, searchString, userId) {
   let filter = {};
 
-  if (!title && !authorName && searchString) {
+  if (userId) {
+    filter.authorId = userId;
+  } else if (!title && !authorName && searchString) {
     filter = {
       $or: [
         { title: { $regex: searchString, $options: "i" } },
@@ -227,6 +245,7 @@ function getSearchBookFilter(title, authorName, searchString) {
 module.exports = {
   getBooks,
   getBook,
+  getFavouriteBooksIds,
   getFavouriteBooks,
   returnSearchBooksCount,
   searchBooks,
