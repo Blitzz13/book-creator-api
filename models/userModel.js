@@ -34,15 +34,25 @@ const userSchema = new Schema(
     },
     books: [
       {
-        type: Schema.Types.ObjectId,
+        type: Schema.ObjectId,
         ref: "Book",
       },
     ],
     favouriteBooks: [
       {
-        type: Schema.Types.ObjectId,
+        type: Schema.ObjectId,
         ref: "Book",
       },
+    ],
+    booksProgress: [
+      {
+        bookId: Schema.ObjectId,
+        currentChapterId: Schema.ObjectId,
+        restoreRefference: String,
+        allChaptersCount: Number,
+        currentChapterOrderId: Number,
+        chapterPercentage: Number,
+      }
     ],
     settings: {
       hideFavouriteBooks: { type: Boolean, default: false },
