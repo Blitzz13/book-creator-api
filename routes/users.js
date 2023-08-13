@@ -9,11 +9,15 @@ const {
     getBookProgress,
     startedBooksProgress,
     removeBookProgress,
+    refreshToken,
 } = require("../controllers/userController");
+const requireAuth = require("../middleware/requireAuth");
 
 const router = express.Router();
 
 router.post("/login", loginUser);
+
+router.get("/refresh-token", requireAuth, refreshToken);
 
 router.post("/signup", signupUser);
 

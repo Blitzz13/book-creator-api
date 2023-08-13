@@ -9,20 +9,24 @@ const {
     updateNote,
     getAllNoteTitles
 } = require("../controllers/noteController");
+
+const requireAuth = require("../middleware/requireAuth");
+const attachUser = require("../middleware/attachUser");
+
 const router = express.Router();
 
-router.get("/titles/:bookId", getAllNoteTitles);
+router.get("/titles/:bookId", attachUser, getAllNoteTitles);
 
 router.get("/:bookId/:count", getNotes);
 
 router.get("/criteria/:bookId/", getNotesByCriteria);
 
-router.get("/:id", getSpecificNote);
+router.get("/:id", attachUser, getSpecificNote);
 
-router.delete("/:id", deleteNote);
+router.delete("/:id", requireAuth, deleteNote);
 
-router.patch("/:id", updateNote);
+router.patch("/:id", requireAuth, updateNote);
 
-router.post("/", createNote);
+router.post("/", requireAuth, createNote);
 
 module.exports = router;

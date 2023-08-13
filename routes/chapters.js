@@ -10,6 +10,8 @@ const {
     deleteChapter,
     getChapterByCriteria
 } = require("../controllers/chapterController");
+
+const requireAuth = require("../middleware/requireAuth");
 const router = express.Router();
 
 router.get("/:bookId/:count", getChapters);
@@ -18,14 +20,14 @@ router.get("/chapter/chapter-titles/:bookId", getAllChapterTitles);
 
 router.get("/:id", getSpecificChapter);
 
-router.delete("/:id", deleteChapter);
+router.delete("/:id", requireAuth, deleteChapter);
 
-router.patch("/:id", updateChapter);
+router.patch("/:id", requireAuth, updateChapter);
 
-router.post("/update-order", updateChaptersOrder);
+router.post("/update-order", requireAuth, updateChaptersOrder);
 
 router.post("/by-criteria", getChapterByCriteria);
 
-router.post("/", createChapter);
+router.post("/", requireAuth, createChapter);
 
 module.exports = router;

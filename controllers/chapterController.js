@@ -1,4 +1,5 @@
 const Chapter = require("../models/chapterModel");
+const Book = require("../models/bookModel");
 const mongoose = require("mongoose");
 
 const getChapters = async (req, res) => {
@@ -105,6 +106,12 @@ const createChapter = async (req, res) => {
   const { header, content, bookId, orderId, state } = req.body;
 
   try {
+    const proceed = await canAddChapters(req.user._id, bookId);
+
+    if (!proceed) {
+      return res.status(400).json({ error: "This user is not eligible to this action" });
+    }
+
     const greatestOrderId = await Chapter.findOne(
       { bookId: bookId },
       { orderId: 1 }
@@ -143,6 +150,13 @@ const deleteChapter = async (req, res) => {
   const { id } = req.body;
 
   try {
+    const chapter = await Chapter.findById(id).select("bookId");
+    const book = await Book.findById(chapter.bookId).select("authorId");
+
+    if (book.authorId !== req.user._id) {
+      return res.status(400).json({ error: "This user is not eligible to this action" });
+    }
+
     const deletedChapter = await Chapter.findByIdAndDelete(id);
 
     const hasChapter = await Chapter.findOne({ bookId: deletedChapter.bookId });
@@ -211,6 +225,12 @@ const updateChapter = async (req, res) => {
   const { orderId } = req.body;
 
   try {
+    const proceed = await canProceed(req.user._id, id);
+
+    if (!proceed) {
+      return res.status(400).json({ error: "This user is not eligible to this action" });
+    }
+
     if (orderId) {
       await updateOrder(id, orderId);
     }
@@ -259,6 +279,27 @@ async function updateOrder(chapterId, orderId) {
     chapter.orderId = newOrderId;
     await chapter.save();
   }
+}
+
+async function canProceed(userId, chapterId) {
+  const chapter = await Chapter.findById(chapterId).select("bookId");
+  const book = await Book.findById(chapter.bookId).select("authorId");
+
+  if (book.authorId.toString() !== userId.toString()) {
+    return false;
+  }
+
+  return true;
+}
+
+async function canAddChapters(userId, bookId) {
+  const book = await Book.findById(bookId).select("authorId");
+
+  if (book.authorId.toString() !== userId.toString()) {
+    return false;
+  }
+
+  return true;
 }
 
 module.exports = {

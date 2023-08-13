@@ -12,26 +12,28 @@ const {
   getFavouriteBooksIds,
   getFavouriteBooks,
 } = require("../controllers/bookController");
+const attachUser = require("../middleware/attachUser");
+const requireAuth = require("../middleware/requireAuth");
 const router = express.Router();
 
 router.get("/", getBooks);
 
 router.get("/:id", getBook);
 
-router.get("/favourites-ids/:id", getFavouriteBooksIds);
+router.get("/favourites-ids/:id", attachUser, getFavouriteBooksIds);
 
-router.get("/favourites/:id", getFavouriteBooks);
+router.get("/favourites/:id", attachUser, getFavouriteBooks);
 
-router.post("/", createBook);
+router.post("/", requireAuth, createBook);
 
 router.post("/search", searchBooks);
 
 router.post("/search/count", returnSearchBooksCount);
 
-router.post("/favourites", addToFavourites);
+router.post("/favourites", requireAuth, addToFavourites);
 
-router.delete("/:id", deleteBook);
+router.delete("/:id", requireAuth, deleteBook);
 
-router.patch("/:id", updateBook);
+router.patch("/:id", requireAuth, updateBook);
 
 module.exports = router;

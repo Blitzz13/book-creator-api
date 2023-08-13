@@ -9,7 +9,11 @@ const getNotes = async (req, res) => {
   }
 
   try {
-    const notes = await Note.find({ bookId }).sort({ orderId: 1 }).limit(count);
+    if (!req.user) {
+      return res.status(200).json([]);
+    }
+
+    const notes = await Note.find({ bookId: bookId, authorId: req.user._id }).sort({ orderId: 1 }).limit(count);
 
     if (!notes) {
       return res.status(404).json({ error: "Notes not found" });
@@ -44,7 +48,7 @@ const getSpecificNote = async (req, res) => {
 const getNotesByCriteria = async (req, res) => {
   const { bookId, noteName, noteId } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!mongoose.Types.ObjectId.isValid(noteId)) {
     return res.status(404).json({ error: `Invalid Id {${id}}` });
   }
 
@@ -127,7 +131,11 @@ const getAllNoteTitles = async (req, res) => {
   }
 
   try {
-    const notes = await Note.find({ bookId });
+    if (!req.user) {
+      return res.status(200).json([]);
+    }
+
+    const notes = await Note.find({ bookId, authorId: req.user._id });
 
     return res.status(200).json(
       notes.map((x) => ({
