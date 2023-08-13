@@ -7,7 +7,7 @@ const { default: mongoose } = require("mongoose");
 const requestQueue = [];
 
 const createToken = (id) => {
-  return jwt.sign({ _id: id }, process.env.SECRET, { expiresIn: "3d" });
+  return jwt.sign({ _id: id }, process.env.SECRET, { expiresIn: "2d" });
 };
 
 const getUserDetails = async (req, res) => {
@@ -26,6 +26,18 @@ const getUserDetails = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+}
+
+const refreshToken = async (req, res) => {
+  try {
+    // Generate a new token with a refreshed expiration time
+    const newToken = createToken();
+
+    res.status(200).send({ token: newToken });
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    res.status(400).send('Error while creating token');
   }
 }
 
@@ -240,4 +252,5 @@ module.exports = {
   getBookProgress,
   removeBookProgress,
   startedBooksProgress,
+  refreshToken,
 };
