@@ -6,7 +6,7 @@ const bookRoutes = require("./routes/books");
 const chapterRoutes = require("./routes/chapters");
 const userRoutes = require("./routes/users");
 const noteRoutes = require("./routes/notes");
-const User = require("./models/userModel");
+const ratingRoutes = require("./routes/ratings");
 
 //Express app
 const app = express();
@@ -24,6 +24,7 @@ app.use("/api/books", bookRoutes);
 app.use("/api/chapters", chapterRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/notes", noteRoutes);
+app.use("/api/ratings", ratingRoutes);
 
 //Connect to DB
 mongoose.connect(process.env.MONGO_URI)
