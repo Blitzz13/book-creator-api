@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { BookState } = require("../enums/BookState");
+const { BookGenre } = require("../enums/BookGenre");
 
 const Schema = mongoose.Schema;
 
@@ -13,6 +14,7 @@ const bookSchema = new Schema(
     },
     genre: {
       type: [String],
+      enum: Object.values(BookGenre),
     },
     description: {
       type: String,
