@@ -2,6 +2,7 @@ const Book = require("../models/bookModel");
 const User = require("../models/userModel");
 const Chapter = require("../models/chapterModel");
 const mongoose = require("mongoose");
+const { BookGenre } = require("../enums/BookGenre");
 
 // get all books
 const getBooks = async (req, res) => {
@@ -15,10 +16,10 @@ const getBooks = async (req, res) => {
 
 // get search books count
 const returnSearchBooksCount = async (req, res) => {
-  const { title, authorName, searchString } = req.body;
+  const { title, authorName, genre, searchString } = req.body;
 
   try {
-    const filter = getSearchBookFilter(title, authorName, searchString);
+    const filter = getSearchBookFilter(title, authorName, searchString, genre);
     const books = await Book.find(filter);
     return res.status(200).json({ booksCount: books.length });
   } catch (error) {
@@ -28,10 +29,10 @@ const returnSearchBooksCount = async (req, res) => {
 
 // search books
 const searchBooks = async (req, res) => {
-  const { title, authorName, searchString, userId, skip, take } = req.body;
+  const { title, authorName, searchString, userId, genre, skip, take } = req.body;
 
   try {
-    const filter = getSearchBookFilter(title, authorName, searchString, userId);
+    const filter = getSearchBookFilter(title, authorName, searchString, genre, userId);
 
     const books = await Book.find(filter)
       .skip(skip)
@@ -200,10 +201,24 @@ const updateBook = async (req, res) => {
   }
 
   try {
+    const { genre } = req.body;
+    const realEnums = Object.values(BookGenre);
+    const updatedGenres = [];
+
+    for (const item of genre) {
+      if (!realEnums.includes(item)) {
+        console.log("Unrecognized genre =>", item);
+        continue;
+      }
+
+      updatedGenres.push(item);
+    }
+
     const book = await Book.findOneAndUpdate(
       { _id: id },
       {
         ...req.body,
+        genre: updatedGenres,
       }
     );
 
@@ -217,16 +232,24 @@ const updateBook = async (req, res) => {
   }
 };
 
-function getSearchBookFilter(title, authorName, searchString, userId) {
+function getSearchBookFilter(title, authorName, searchString, genre, userId) {
   let filter = {};
 
   if (userId) {
     filter.authorId = userId;
-  } else if (!title && !authorName && searchString) {
+  } else if (!title && !authorName && !genre && searchString) {
     filter = {
       $or: [
         { title: { $regex: searchString, $options: "i" } },
         { author: { $regex: searchString, $options: "i" } },
+        {
+          $expr: {
+            $gt: [
+              { $size: { $filter: { input: "$genre", cond: { $regexMatch: { input: "$$this", regex: searchString, options: "i" } } } } },
+              0
+            ]
+          }
+        },
       ],
     };
   } else {
@@ -236,6 +259,11 @@ function getSearchBookFilter(title, authorName, searchString, userId) {
 
     if (authorName) {
       filter.author = { $regex: authorName, $options: "i" };
+    }
+
+    if (genre) {
+      const genreArray = Array.isArray(genre) ? genre : [genre];
+      filter.genre = { $in: genreArray };
     }
   }
 
