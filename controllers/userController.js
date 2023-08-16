@@ -1,6 +1,7 @@
 const User = require("../models/userModel");
 const Book = require("../models/bookModel");
 const Chapter = require("../models/chapterModel");
+const { UserRole } = require("../enums/UserRole");
 const jwt = require("jsonwebtoken");
 const { default: mongoose } = require("mongoose");
 
@@ -21,6 +22,7 @@ const getUserDetails = async (req, res) => {
       displayName: user.displayName,
       description: user.description,
       imageUrl: user.imageUrl,
+      role: user.role,
       email: user.email,
       settings: user.settings,
     });
@@ -42,7 +44,13 @@ const refreshToken = async (req, res) => {
 }
 
 const updateUserDetails = async (req, res) => {
-  const { userId, displayName, description, imageUrl, settings } = req.body;
+  const { userId, displayName, description, imageUrl, role, settings } = req.body;
+
+  const proceed = await canProceed(req.user._id, userId);
+
+  if (!proceed && req.user.role !== UserRole.Admin) {
+    return res.status(401).json({ error: "This user is not eligible to this action" });
+  }
 
   const updateFields = {
     settings: {}
@@ -58,6 +66,10 @@ const updateUserDetails = async (req, res) => {
 
   if (description) {
     updateFields.description = description;
+  }
+
+  if (role && req.user.role === UserRole.Admin) {
+    updateFields.role = role;
   }
 
   if (settings) {
@@ -138,7 +150,11 @@ const saveBookProgressHandler = async (request) => {
 
 const saveBookProgress = async (req, res) => {
   const request = { req, res, ...req.body };
+  const proceed = await canProceed(req.user._id, id);
 
+  if (!proceed && req.user.role !== UserRole.Admin) {
+    return res.status(401).json({ error: "This user is not eligible to this action" });
+  }
   // Enqueue the request for processing
   enqueueRequest(request);
 };
@@ -201,7 +217,7 @@ const loginUser = async (req, res) => {
     const displayName = user.displayName;
 
     const token = createToken(user._id);
-    res.status(200).json({ email, token, displayName, id: user._id });
+    res.status(200).json({ email, token, displayName, id: user._id, role: user.role });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -241,6 +257,14 @@ async function enqueueRequest(request) {
     // Start processing requests if the queue was empty
     await processRequests();
   }
+}
+
+async function canProceed(currUserId, otherUserId) {
+  if (currUserId.toString() !== otherUserId.toString()) {
+    return false;
+  }
+
+  return true;
 }
 
 module.exports = {

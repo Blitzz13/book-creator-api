@@ -1,7 +1,7 @@
 const Chapter = require("../models/chapterModel");
 const Book = require("../models/bookModel");
+const { UserRole } = require("../enums/UserRole");
 const mongoose = require("mongoose");
-
 const getChapters = async (req, res) => {
   const { count, bookId } = req.params;
 
@@ -28,7 +28,27 @@ const updateChaptersOrder = async (req, res) => {
   try {
     const { orderId, chapterId } = req.body;
 
-    await updateOrder(chapterId, orderId);
+    const proceed = await canAddChapters(req.user._id, bookId);
+
+    if (!proceed) {
+      return res.status(401).json({ error: "This user is not eligible to this action" });
+    }
+    
+    const greatestOrderId = await Chapter.findOne(
+      { bookId: bookId },
+      { orderId: 1 }
+    )
+      .sort({ orderId: -1 })
+      .limit(1);
+    let correctOrderId = orderId;
+
+    if (greatestOrderId && (orderId < 1 || orderId > greatestOrderId.orderId + 1)) {
+      correctOrderId = greatestOrderId.orderId + 1;
+    } else {
+      correctOrderId = 1;
+    }
+
+    await updateOrder(chapterId, correctOrderId);
 
     return res.status(200).json({ _id: chapterId, orderId: orderId });
   } catch (error) {
@@ -108,8 +128,8 @@ const createChapter = async (req, res) => {
   try {
     const proceed = await canAddChapters(req.user._id, bookId);
 
-    if (!proceed) {
-      return res.status(400).json({ error: "This user is not eligible to this action" });
+    if (!proceed && req.user.role !== UserRole.Admin) {
+      return res.status(401).json({ error: "This user is not eligible to this action" });
     }
 
     const greatestOrderId = await Chapter.findOne(
@@ -150,11 +170,10 @@ const deleteChapter = async (req, res) => {
   const { id } = req.body;
 
   try {
-    const chapter = await Chapter.findById(id).select("bookId");
-    const book = await Book.findById(chapter.bookId).select("authorId");
+    const proceed = await canProceed(req.user._id, id);
 
-    if (book.authorId !== req.user._id) {
-      return res.status(400).json({ error: "This user is not eligible to this action" });
+    if (!proceed && req.user.role !== UserRole.Admin) {
+      return res.status(401).json({ error: "This user is not eligible to this action" });
     }
 
     const deletedChapter = await Chapter.findByIdAndDelete(id);
@@ -227,12 +246,29 @@ const updateChapter = async (req, res) => {
   try {
     const proceed = await canProceed(req.user._id, id);
 
-    if (!proceed) {
-      return res.status(400).json({ error: "This user is not eligible to this action" });
+    if (!proceed && req.user.role !== UserRole.Admin) {
+      return res.status(401).json({ error: "This user is not eligible to this action" });
     }
 
+    
     if (orderId) {
-      await updateOrder(id, orderId);
+      const currChapter = await Chapter.findById(id).select("bookId");
+  
+      const greatestOrderId = await Chapter.findOne(
+        { bookId: currChapter.bookId },
+        { orderId: 1 }
+      )
+        .sort({ orderId: -1 })
+        .limit(1);
+      let correctOrderId = orderId;
+  
+      if (greatestOrderId && (orderId < 1 || orderId > greatestOrderId.orderId + 1)) {
+        correctOrderId = greatestOrderId.orderId + 1;
+      } else {
+        correctOrderId = 1;
+      }
+
+      await updateOrder(id, correctOrderId);
     }
 
     const chapter = await Chapter.findOneAndUpdate(

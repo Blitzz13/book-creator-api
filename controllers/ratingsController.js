@@ -1,5 +1,6 @@
 const Rating = require("../models/ratingModel");
 const Book = require("../models/bookModel");
+const { UserRole } = require("../enums/UserRole");
 const mongoose = require('mongoose');
 
 const createRating = async (req, res) => {
@@ -34,6 +35,12 @@ const updateRating = async (req, res) => {
         const { ratingId } = req.params;
         const { rating, comment } = req.body;
 
+        const proceed = await canProceed(req.user._id, id);
+
+        if (!proceed && req.user.role !== UserRole.Admin) {
+            return res.status(401).json({ error: "This user is not eligible to this action" });
+        }
+
         const foundRating = await Rating.findById(ratingId).select("user");
 
         if (!foundRating) {
@@ -63,6 +70,12 @@ const updateRating = async (req, res) => {
 const deleteRating = async (req, res) => {
     try {
         const ratingId = req.params.ratingId;
+
+        const proceed = await canProceed(req.user._id, ratingId);
+
+        if (!proceed && req.user.role !== UserRole.Admin) {
+            return res.status(401).json({ error: "This user is not eligible to this action" });
+        }
 
         const foundRating = await Rating.findById(ratingId);
         if (!foundRating) {
@@ -193,6 +206,16 @@ async function doesBookExists(bookId) {
     }
 
     return false;
+}
+
+async function canProceed(userId, ratingId) {
+    const rating = await Rating.findById(ratingId).select("user");
+
+    if (rating.user.toString() !== userId.toString()) {
+        return false;
+    }
+
+    return true;
 }
 
 module.exports = {

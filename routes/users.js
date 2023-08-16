@@ -23,9 +23,9 @@ router.post("/signup", signupUser);
 
 router.get("/details/:userId", getUserDetails);
 
-router.post("/details/:userId", updateUserDetails);
+router.post("/details/:userId", requireAuth, updateUserDetails);
 
-router.post("/bookProgress", saveBookProgress);
+router.post("/bookProgress", requireAuth, saveBookProgress);
 
 router.get("/bookProgress/:userId/:bookId", getBookProgress);
 
