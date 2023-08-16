@@ -3,6 +3,7 @@ const User = require("../models/userModel");
 const Chapter = require("../models/chapterModel");
 const mongoose = require("mongoose");
 const { BookGenre } = require("../enums/BookGenre");
+const { UserRole } = require("../enums/UserRole");
 
 // get all books
 const getBooks = async (req, res) => {
@@ -56,6 +57,12 @@ const addToFavourites = async (req, res) => {
   }
 
   try {
+    const proceed = await canProceed(req.user._id, id);
+
+    if (!proceed && req.user.role !== UserRole.Admin) {
+      return res.status(401).json({ error: "This user is not eligible to this action" });
+    }
+    
     const user = await User.findById(userId);
 
     if (!user.favouriteBooks.includes(bookId)) {
@@ -132,7 +139,6 @@ const createBook = async (req, res) => {
     coverImage,
     genre,
     title,
-    authorId,
     backCoverImage,
     state,
     rating,
@@ -140,9 +146,9 @@ const createBook = async (req, res) => {
   } = req.body;
 
   try {
-    const user = await User.findById(authorId);
-    if (mongoose.isValidObjectId({ _id: authorId }) || !user) {
-      throw new Error(`Invalid author id ${authorId}`);
+    const user = await User.findById(req.user._id);
+    if (mongoose.isValidObjectId({ _id: req.user._id }) || !user) {
+      throw new Error(`Invalid author id ${req.user._id}`);
     }
 
     const book = await Book.create({
@@ -150,7 +156,7 @@ const createBook = async (req, res) => {
       genre,
       title,
       author: user.displayName,
-      authorId,
+      authorId: user._id,
       backCoverImage,
       state,
       rating,
@@ -175,11 +181,18 @@ const deleteBook = async (req, res) => {
   }
 
   try {
+    const proceed = await canProceed(req.user._id, id);
+
+    if (!proceed && req.user.role !== UserRole.Admin) {
+      return res.status(401).json({ error: "This user is not eligible to this action" });
+    }
+
     const book = await Book.findOneAndDelete({ _id: id });
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
 
+    // Should book notes be deleted
     const user = await User.findById({ _id: book.authorId });
     await Chapter.deleteMany({ bookId: book.id });
     user.books.splice(user.books.indexOf(book._id), 1);
@@ -201,6 +214,12 @@ const updateBook = async (req, res) => {
   }
 
   try {
+    const proceed = await canProceed(req.user._id, id);
+
+    if (!proceed && req.user.role !== UserRole.Admin) {
+      return res.status(401).json({ error: "This user is not eligible to this action" });
+    }
+
     const { genre } = req.body;
     const realEnums = Object.values(BookGenre);
     const updatedGenres = [];
@@ -268,6 +287,16 @@ function getSearchBookFilter(title, authorName, searchString, genre, userId) {
   }
 
   return filter;
+}
+
+async function canProceed(userId, bookId) {
+  const book = await Book.findById(bookId).select("authorId");
+
+  if (book.authorId.toString() !== userId.toString()) {
+    return false;
+  }
+
+  return true;
 }
 
 module.exports = {
