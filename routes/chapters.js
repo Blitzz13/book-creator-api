@@ -12,13 +12,14 @@ const {
 } = require("../controllers/chapterController");
 
 const requireAuth = require("../middleware/requireAuth");
+const attachUser = require("../middleware/attachUser");
 const router = express.Router();
 
 router.get("/:bookId/:count", getChapters);
 
-router.get("/chapter/chapter-titles/:bookId", getAllChapterTitles);
+router.get("/chapter/chapter-titles/:bookId", attachUser, getAllChapterTitles);
 
-router.get("/:id", getSpecificChapter);
+router.get("/:id", attachUser, getSpecificChapter);
 
 router.delete("/:id", requireAuth, deleteChapter);
 

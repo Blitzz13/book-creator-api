@@ -4,6 +4,7 @@ const Chapter = require("../models/chapterModel");
 const mongoose = require("mongoose");
 const { BookGenre } = require("../enums/BookGenre");
 const { UserRole } = require("../enums/UserRole");
+const { BookState } = require("../enums/BookState");
 
 // get all books
 const getBooks = async (req, res) => {
@@ -17,10 +18,15 @@ const getBooks = async (req, res) => {
 
 // get search books count
 const returnSearchBooksCount = async (req, res) => {
-  const { title, authorName, genre, searchString } = req.body;
+  const { title, authorName, searchString, userId, genre, state } = req.body;
 
   try {
-    const filter = getSearchBookFilter(title, authorName, searchString, genre);
+    let user;
+    if (req.user) {
+      user = req.user;
+    }
+
+    const filter = getSearchBookFilter(title, authorName, searchString, genre, userId, user, state);
     const books = await Book.find(filter);
     return res.status(200).json({ booksCount: books.length });
   } catch (error) {
@@ -30,10 +36,15 @@ const returnSearchBooksCount = async (req, res) => {
 
 // search books
 const searchBooks = async (req, res) => {
-  const { title, authorName, searchString, userId, genre, skip, take } = req.body;
+  const { title, authorName, searchString, userId, genre, state, skip, take } = req.body;
 
   try {
-    const filter = getSearchBookFilter(title, authorName, searchString, genre, userId);
+    let user;
+    if (req.user) {
+      user = req.user;
+    }
+
+    const filter = getSearchBookFilter(title, authorName, searchString, genre, userId, user, state);
 
     const books = await Book.find(filter)
       .skip(skip)
@@ -62,7 +73,7 @@ const addToFavourites = async (req, res) => {
     if (!proceed && req.user.role !== UserRole.Admin) {
       return res.status(401).json({ error: "This user is not eligible to this action" });
     }
-    
+
     const user = await User.findById(userId);
 
     if (!user.favouriteBooks.includes(bookId)) {
@@ -220,17 +231,19 @@ const updateBook = async (req, res) => {
       return res.status(401).json({ error: "This user is not eligible to this action" });
     }
 
-    const { genre } = req.body;
+    const { genre, userIds } = req.body;
     const realEnums = Object.values(BookGenre);
     const updatedGenres = [];
 
-    for (const item of genre) {
-      if (!realEnums.includes(item)) {
-        console.log("Unrecognized genre =>", item);
-        continue;
-      }
+    if (genre) {
+      for (const item of genre) {
+        if (!realEnums.includes(item)) {
+          console.log("Unrecognized genre =>", item);
+          continue;
+        }
 
-      updatedGenres.push(item);
+        updatedGenres.push(item);
+      }
     }
 
     const book = await Book.findOneAndUpdate(
@@ -238,6 +251,7 @@ const updateBook = async (req, res) => {
       {
         ...req.body,
         genre: updatedGenres,
+        inviteList: userIds,
       }
     );
 
@@ -251,10 +265,10 @@ const updateBook = async (req, res) => {
   }
 };
 
-function getSearchBookFilter(title, authorName, searchString, genre, userId) {
+function getSearchBookFilter(title, authorName, searchString, genre, userId, user, state) {
   let filter = {};
 
-  if (userId) {
+  if (userId && !state) {
     filter.authorId = userId;
   } else if (!title && !authorName && !genre && searchString) {
     filter = {
@@ -272,6 +286,10 @@ function getSearchBookFilter(title, authorName, searchString, genre, userId) {
       ],
     };
   } else {
+    if (userId) {
+      filter.inviteList = userId;
+    }
+
     if (title) {
       filter.title = { $regex: title, $options: "i" };
     }
@@ -284,6 +302,18 @@ function getSearchBookFilter(title, authorName, searchString, genre, userId) {
       const genreArray = Array.isArray(genre) ? genre : [genre];
       filter.genre = { $in: genreArray };
     }
+  }
+
+  if (user) {
+    if (userId !== user._id.toString()) {
+      if (user.role !== UserRole.Admin) {
+        filter.state = { $nin: [BookState.InvitesOnly, BookState.Draft] }
+      } else if (state && user.role === UserRole.Admin) {
+        filter.state = state;
+      }
+    }
+  } else {
+    filter.state = { $nin: [BookState.InvitesOnly, BookState.Draft] }
   }
 
   return filter;

@@ -5,4 +5,4 @@ const ChapterState = {
   Finished: "finished",
 };
 
-module.exports = { BookState: ChapterState };
+module.exports = { ChapterState };

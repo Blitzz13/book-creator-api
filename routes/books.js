@@ -26,9 +26,9 @@ router.get("/favourites/:id", attachUser, getFavouriteBooks);
 
 router.post("/", requireAuth, createBook);
 
-router.post("/search", searchBooks);
+router.post("/search", attachUser, searchBooks);
 
-router.post("/search/count", returnSearchBooksCount);
+router.post("/search/count", attachUser, returnSearchBooksCount);
 
 router.post("/favourites", requireAuth, addToFavourites);
 

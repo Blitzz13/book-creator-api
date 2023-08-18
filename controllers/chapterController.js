@@ -2,6 +2,7 @@ const Chapter = require("../models/chapterModel");
 const Book = require("../models/bookModel");
 const { UserRole } = require("../enums/UserRole");
 const mongoose = require("mongoose");
+const { ChapterState } = require("../enums/ChapterState");
 const getChapters = async (req, res) => {
   const { count, bookId } = req.params;
 
@@ -28,27 +29,13 @@ const updateChaptersOrder = async (req, res) => {
   try {
     const { orderId, chapterId } = req.body;
 
-    const proceed = await canAddChapters(req.user._id, bookId);
+    const proceed = await canProceed(req.user._id, chapterId);
 
     if (!proceed) {
       return res.status(401).json({ error: "This user is not eligible to this action" });
     }
-    
-    const greatestOrderId = await Chapter.findOne(
-      { bookId: bookId },
-      { orderId: 1 }
-    )
-      .sort({ orderId: -1 })
-      .limit(1);
-    let correctOrderId = orderId;
 
-    if (greatestOrderId && (orderId < 1 || orderId > greatestOrderId.orderId + 1)) {
-      correctOrderId = greatestOrderId.orderId + 1;
-    } else {
-      correctOrderId = 1;
-    }
-
-    await updateOrder(chapterId, correctOrderId);
+    await updateOrder(chapterId, orderId);
 
     return res.status(200).json({ _id: chapterId, orderId: orderId });
   } catch (error) {
@@ -64,7 +51,18 @@ const getAllChapterTitles = async (req, res) => {
   }
 
   try {
-    const chapters = await Chapter.find({ bookId }).sort({ orderId: 1 });
+    let filter = { bookId: bookId }
+    if (req.user) {
+      const isAuthor = await isTheAuthor(req.user._id, bookId);
+  
+      if (!isAuthor && req.user.role !== UserRole.Admin) {
+        filter.state = { $in: [ChapterState.Finished, ChapterState.Public] }
+      }
+    } else {
+      filter.state = { $in: [ChapterState.Finished, ChapterState.Public] }
+    }
+    
+    const chapters = await Chapter.find(filter).sort({ orderId: 1 });
 
     return res.status(200).json(
       chapters.map((x) => ({
@@ -86,7 +84,19 @@ const getSpecificChapter = async (req, res) => {
   }
 
   try {
-    const chapter = await Chapter.findById(id);
+    let filter = { _id: id }
+
+    if (req.user) {
+      const proceed = await canProceed(req.user._id, id);
+  
+      if (!proceed && req.user.role !== UserRole.Admin) {
+        filter.state = { $in: [ChapterState.Finished, ChapterState.Public] };
+      }
+    } else {
+      filter.state = { $in: [ChapterState.Finished, ChapterState.Public] };
+    }
+
+    const chapter = await Chapter.findOne(filter);
 
     if (!chapter) {
       return res.status(404).json({ error: "Chapter not found" });
@@ -126,7 +136,7 @@ const createChapter = async (req, res) => {
   const { header, content, bookId, orderId, state } = req.body;
 
   try {
-    const proceed = await canAddChapters(req.user._id, bookId);
+    const proceed = await isTheAuthor(req.user._id, bookId);
 
     if (!proceed && req.user.role !== UserRole.Admin) {
       return res.status(401).json({ error: "This user is not eligible to this action" });
@@ -142,7 +152,7 @@ const createChapter = async (req, res) => {
     let correctOrderId = orderId;
     if (greatestOrderId && (orderId < 1 || orderId > greatestOrderId.orderId + 1)) {
       correctOrderId = greatestOrderId.orderId + 1;
-    } else {
+    } else if (!greatestOrderId) {
       correctOrderId = 1;
     }
 
@@ -150,7 +160,7 @@ const createChapter = async (req, res) => {
       header,
       content,
       bookId,
-      orderId: correctOrderId,
+      orderId: greatestOrderId.orderId + 1,
       state,
     });
 
@@ -215,7 +225,7 @@ const deleteChapter = async (req, res) => {
             // Execute all the update operations
             return Promise.all(updatedDocuments);
           })
-          .then((updatedDocuments) => {
+          .then(() => {
             console.log("Documents updated successfully");
           })
           .catch((error) => {
@@ -250,25 +260,9 @@ const updateChapter = async (req, res) => {
       return res.status(401).json({ error: "This user is not eligible to this action" });
     }
 
-    
-    if (orderId) {
-      const currChapter = await Chapter.findById(id).select("bookId");
-  
-      const greatestOrderId = await Chapter.findOne(
-        { bookId: currChapter.bookId },
-        { orderId: 1 }
-      )
-        .sort({ orderId: -1 })
-        .limit(1);
-      let correctOrderId = orderId;
-  
-      if (greatestOrderId && (orderId < 1 || orderId > greatestOrderId.orderId + 1)) {
-        correctOrderId = greatestOrderId.orderId + 1;
-      } else {
-        correctOrderId = 1;
-      }
-
-      await updateOrder(id, correctOrderId);
+    const currChapter = await Chapter.findById(id).select("bookId");
+    if (orderId !== currChapter.orderId) {
+      await updateOrder(id, orderId);
     }
 
     const chapter = await Chapter.findOneAndUpdate(
@@ -328,7 +322,7 @@ async function canProceed(userId, chapterId) {
   return true;
 }
 
-async function canAddChapters(userId, bookId) {
+async function isTheAuthor(userId, bookId) {
   const book = await Book.findById(bookId).select("authorId");
 
   if (book.authorId.toString() !== userId.toString()) {

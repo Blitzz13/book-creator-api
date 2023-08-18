@@ -7,6 +7,7 @@ const chapterRoutes = require("./routes/chapters");
 const userRoutes = require("./routes/users");
 const noteRoutes = require("./routes/notes");
 const ratingRoutes = require("./routes/ratings");
+const Book = require("./models/bookModel");
 
 //Express app
 const app = express();
