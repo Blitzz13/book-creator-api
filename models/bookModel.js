@@ -41,6 +41,9 @@ const bookSchema = new Schema(
     rating: {
       type: Number,
     },
+    inviteList: {
+      type: [String],
+    },
     chapters: {
       type: [
         {

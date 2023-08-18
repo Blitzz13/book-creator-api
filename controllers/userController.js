@@ -4,6 +4,7 @@ const Chapter = require("../models/chapterModel");
 const { UserRole } = require("../enums/UserRole");
 const jwt = require("jsonwebtoken");
 const { default: mongoose } = require("mongoose");
+const { ChapterState } = require("../enums/ChapterState");
 
 const requestQueue = [];
 
@@ -40,6 +41,45 @@ const refreshToken = async (req, res) => {
   } catch (error) {
     console.error('Error refreshing token:', error);
     res.status(400).send('Error while creating token');
+  }
+}
+
+const searchUser = async (req, res) => {
+  const { email, displayName } = req.body;
+  let filter = {};
+  try {
+    if (email) {
+      filter.email = { $regex: email, $options: "i" };
+    }
+
+    if (displayName) {
+      filter.displayName = { $regex: displayName, $options: "i" };
+    }
+
+    const users = await User.find(filter).select("email displayName _id");
+
+    return res.status(200).json(users.map(x => ({
+      email: x.email,
+      displayName: x.displayName,
+      userId: x._id,
+    })));
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+
+const searchUserIds = async (req, res) => {
+  const { userIds } = req.body;
+  try {
+    const users = await User.find({ _id: { $in: userIds } }).select("email displayName _id");
+
+    return res.status(200).json(users.map(x => ({
+      email: x.email,
+      displayName: x.displayName,
+      userId: x._id,
+    })));
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 }
 
@@ -149,8 +189,9 @@ const saveBookProgressHandler = async (request) => {
 };
 
 const saveBookProgress = async (req, res) => {
+  const { userId } = req.body;
   const request = { req, res, ...req.body };
-  const proceed = await canProceed(req.user._id, id);
+  const proceed = await canProceed(req.user._id, userId);
 
   if (!proceed && req.user.role !== UserRole.Admin) {
     return res.status(401).json({ error: "This user is not eligible to this action" });
@@ -165,6 +206,13 @@ const getBookProgress = async (req, res) => {
   try {
     const user = await User.findById(userId);
     let bookProgress = user.booksProgress.find(x => x.bookId.toString() === bookId);
+    const chapter = await Chapter.findById(bookProgress.currentChapterId);
+
+    const isAuthor = await isTheAuthor(req.user._id, bookId);
+
+  if (!isAuthor && req.user.role !== UserRole.Admin && chapter.state === ChapterState.Draft) {
+    return res.status(200).json(null);
+  }
 
     res.status(200).json(bookProgress || null);
   } catch (error) {
@@ -267,6 +315,15 @@ async function canProceed(currUserId, otherUserId) {
   return true;
 }
 
+async function isTheAuthor(currUserId, bookId) {
+  const book = await Book.findById(bookId)
+  if (currUserId.toString() !== book.authorId.toString()) {
+    return false;
+  }
+
+  return true;
+}
+
 module.exports = {
   loginUser,
   signupUser,
@@ -277,4 +334,6 @@ module.exports = {
   removeBookProgress,
   startedBooksProgress,
   refreshToken,
+  searchUser,
+  searchUserIds,
 };
