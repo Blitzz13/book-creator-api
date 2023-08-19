@@ -68,7 +68,7 @@ const addToFavourites = async (req, res) => {
   }
 
   try {
-    const proceed = await canProceed(req.user._id, id);
+    const proceed = await canProceed(req.user._id, bookId);
 
     if (!proceed && req.user.role !== UserRole.Admin) {
       return res.status(401).json({ error: "This user is not eligible to this action" });
