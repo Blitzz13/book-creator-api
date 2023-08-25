@@ -12,6 +12,10 @@ const requireAuth = async (req, res, next) => {
     try {
         const { _id } = jwt.verify(token, process.env.SECRET);
 
+        if (!_id) {
+            throw new Error("No id decoded");
+        }
+
         req.user = await User.findOne({ _id }).select("_id role");
         next();
     } catch (error) {

@@ -206,13 +206,15 @@ const getBookProgress = async (req, res) => {
   try {
     const user = await User.findById(userId);
     let bookProgress = user.booksProgress.find(x => x.bookId.toString() === bookId);
-    const chapter = await Chapter.findById(bookProgress.currentChapterId);
 
-    const isAuthor = await isTheAuthor(req.user._id, bookId);
+    if (bookProgress) {
+      const chapter = await Chapter.findById(bookProgress.currentChapterId);
+      const isAuthor = await isTheAuthor(req.user._id, bookId);
 
-  if (!isAuthor && req.user.role !== UserRole.Admin && chapter.state === ChapterState.Draft) {
-    return res.status(200).json(null);
-  }
+      if (!isAuthor && req.user.role !== UserRole.Admin && chapter.state === ChapterState.Draft) {
+        return res.status(200).json(null);
+      }
+    }
 
     res.status(200).json(bookProgress || null);
   } catch (error) {
