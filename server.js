@@ -7,7 +7,6 @@ const chapterRoutes = require("./routes/chapters");
 const userRoutes = require("./routes/users");
 const noteRoutes = require("./routes/notes");
 const ratingRoutes = require("./routes/ratings");
-const Book = require("./models/bookModel");
 
 //Express app
 const app = express();
@@ -34,9 +33,9 @@ mongoose.connect(process.env.MONGO_URI)
             console.log(`Connected to DB and listening localhost:${process.env.PORT}`);
         });
 
-        // app.listen(process.env.PORT, process.env.HOST_NAME, () =>{
-        //     console.log(`Connected to DB and listening on ${process.env.HOST_NAME}:${process.env.PORT}`);
-        // });
+        app.listen(process.env.PORT, process.env.HOST_NAME, () =>{
+            console.log(`Connected to DB and listening on ${process.env.HOST_NAME}:${process.env.PORT}`);
+        });
     })
     .catch((error) => {
         console.error(error)

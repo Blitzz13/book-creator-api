@@ -2,6 +2,8 @@ const Rating = require("../models/ratingModel");
 const Book = require("../models/bookModel");
 const { UserRole } = require("../enums/UserRole");
 const mongoose = require('mongoose');
+const { Order } = require("../enums/Order");
+const { RatingSort } = require("../enums/RatingSort");
 
 const createRating = async (req, res) => {
     try {
@@ -35,7 +37,7 @@ const updateRating = async (req, res) => {
         const { ratingId } = req.params;
         const { rating, comment } = req.body;
 
-        const proceed = await canProceed(req.user._id, id);
+        const proceed = await canProceed(req.user._id, ratingId);
 
         if (!proceed && req.user.role !== UserRole.Admin) {
             return res.status(401).json({ error: "This user is not eligible to this action" });
@@ -104,23 +106,43 @@ const getAverageRatingForBook = async (req, res) => {
             return res.status(404).json({ message: 'Book not found' });
         }
 
-        const averageRating = await Rating.aggregate([
+        const objectIdBookId = new mongoose.Types.ObjectId(bookId);
+        const averageRatings = await Rating.aggregate([
             {
-                $match: { book: bookId }
+                $match: { book: objectIdBookId } // Filter ratings for the specified book ID
             },
             {
                 $group: {
-                    bookId: '$book',
-                    averageRating: { $avg: '$value' }
+                    _id: '$book',
+                    averageRating: { $avg: '$rating' },
+                    numberOfRatings: { $sum: 1 }, // Count the total ratings for the book
+                    comment: { $push: '$comment' }
                 }
             }
         ]);
 
-        if (averageRating.length === 0) {
-            return res.status(404).json({ message: 'Book not found or no ratings available' });
-        }
+        // Set average to 0 for books with no ratings
+        averageRatings.forEach((rating) => {
+            if (rating.numberOfRatings === 0) {
+                rating.averageRating = 0;
+            }
+        });
 
-        res.status(200).json(averageRating[0]);
+        if (averageRatings.length > 0) {
+            const result = averageRatings[0];
+            res.status(200).json({
+                bookId: result._id,
+                averageRating: result.averageRating,
+                comment: result.comment,
+                numberOfRatings: result.numberOfRatings,
+            });
+        } else {
+            res.status(200).json({
+                bookId: bookId,
+                averageRating: 0,
+                numberOfRatings: 0,
+            });
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error retrieving average rating' });
@@ -157,6 +179,40 @@ const getUserRatingOfBook = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error retrieving user ratings' });
+    }
+}
+
+const getAllRatingsOfBook = async (req, res) => {
+    try {
+        const { bookId, order, sort } = req.body;
+
+        let sortOptions = {};
+        if (sort === RatingSort.ByDate) {
+            sortOptions = { createdAt: order === Order.Acending ? 1 : -1 };
+        } else if (sort === RatingSort.ByRating) {
+            sortOptions = { rating: order === Order.Acending ? 1 : -1 };
+        }
+
+        const ratings = await Rating.find({ book: bookId })
+            .populate({
+                path: 'user',
+                select: 'displayName _id'
+            })
+            .sort(sortOptions);
+
+        const formattedRatings = ratings.map(rating => ({
+            displayName: rating.user.displayName,
+            book: rating.book,
+            comment: rating.comment,
+            id: rating._id,
+            userId: rating.user._id,
+            rating: rating.rating
+        }));
+
+        res.status(200).json(formattedRatings);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error retrieving book ratings' });
     }
 }
 
@@ -226,4 +282,5 @@ module.exports = {
     deleteRating,
     getAllUserRatings,
     getUserRatingOfBook,
+    getAllRatingsOfBook,
 };

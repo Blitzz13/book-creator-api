@@ -8,6 +8,7 @@ const {
     getAverageRatingForMultipleBooks,
     getAllUserRatings,
     getUserRatingOfBook,
+    getAllRatingsOfBook,
 } = require("../controllers/ratingsController");
 
 const requireAuth = require("../middleware/requireAuth");
@@ -21,6 +22,8 @@ router.get("/user/:userId", getAllUserRatings);
 router.get("/user/:userId/:bookId", getUserRatingOfBook);
 
 router.post("/average", getAverageRatingForMultipleBooks);
+
+router.post("/:bookId", getAllRatingsOfBook);
 
 router.post("/rate/:bookId", requireAuth, createRating);
 
