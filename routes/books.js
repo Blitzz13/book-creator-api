@@ -11,12 +11,15 @@ const {
   addToFavourites,
   getFavouriteBooksIds,
   getFavouriteBooks,
+  downloadBook,
 } = require("../controllers/bookController");
 const attachUser = require("../middleware/attachUser");
 const requireAuth = require("../middleware/requireAuth");
 const router = express.Router();
 
 router.get("/", getBooks);
+
+router.get("/download/:id", downloadBook);
 
 router.get("/:id", getBook);
 

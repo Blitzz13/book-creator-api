@@ -5,6 +5,8 @@ const mongoose = require("mongoose");
 const { BookGenre } = require("../enums/BookGenre");
 const { UserRole } = require("../enums/UserRole");
 const { BookState } = require("../enums/BookState");
+const epub = require('epub-gen-memory').default;
+const QuillDeltaConverter = require('quill-delta-to-html').QuillDeltaToHtmlConverter;
 
 // get all books
 const getBooks = async (req, res) => {
@@ -118,6 +120,40 @@ const getFavouriteBooks = async (req, res) => {
     const user = await User.findById(id).populate("favouriteBooks");
 
     return res.status(200).json(user.favouriteBooks);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+const downloadBook = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ error: "Invalid user id" });
+  }
+
+  try {
+    const book = await Book.findById(id).select("author title coverImage");
+    const chapters = await Chapter.find({ bookId: id }).select("content header");
+    const mapedChapters = chapters.map(x => ({ content: x.content, title: x.header }));
+    const content = [];
+
+    for (const chapter of mapedChapters) {
+      const delta = JSON.parse(chapter.content);
+      const deltaToHtml = new QuillDeltaConverter(delta.ops);
+      const htmlContent = deltaToHtml.convert();
+
+      content.push({
+        content: htmlContent,
+        title: chapter.title,
+      });
+    }
+
+    const file = await epub({ title: book.title.replace(":", ""), author: book.author, cover: book.coverImage }, content);
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename=${book.title}.epub`);
+    return res.send(file);
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -340,4 +376,5 @@ module.exports = {
   deleteBook,
   updateBook,
   addToFavourites,
+  downloadBook
 };

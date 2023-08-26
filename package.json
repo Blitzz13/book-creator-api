@@ -17,7 +17,9 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.0.2",
-    "validator": "^13.9.0"
+    "validator": "^13.9.0",
+    "epub-gen-memory": "^1.0.10",
+    "quill-delta-to-html": "^0.12.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.21"
