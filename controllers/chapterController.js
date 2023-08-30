@@ -284,7 +284,7 @@ async function updateOrder(chapterId, orderId) {
   const chapter = await Chapter.findById(chapterId);
   const currentOrderId = chapter.orderId;
 
-  if (newOrderId !== currentOrderId) {
+  if (parseInt(newOrderId) !== currentOrderId) {
     const chaptersToUpdate = await Chapter.find({
       bookId: chapter.bookId,
       orderId: {

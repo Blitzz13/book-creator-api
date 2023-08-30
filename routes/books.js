@@ -12,6 +12,7 @@ const {
   getFavouriteBooksIds,
   getFavouriteBooks,
   downloadBook,
+  uploadBook,
 } = require("../controllers/bookController");
 const attachUser = require("../middleware/attachUser");
 const requireAuth = require("../middleware/requireAuth");
@@ -20,6 +21,8 @@ const router = express.Router();
 router.get("/", getBooks);
 
 router.get("/download/:id", downloadBook);
+
+router.post("/upload", requireAuth, uploadBook);
 
 router.get("/:id", getBook);
 

@@ -12,7 +12,7 @@ const ratingRoutes = require("./routes/ratings");
 const app = express();
 
 //Middleware
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "20mb" }));
 
 app.use((req, res, next) => {
     console.log(req.path, req.method);
