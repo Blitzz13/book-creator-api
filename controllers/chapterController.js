@@ -32,7 +32,9 @@ const updateChaptersOrder = async (req, res) => {
     const proceed = await canProceed(req.user._id, chapterId);
 
     if (!proceed) {
-      return res.status(401).json({ error: "This user is not eligible to this action" });
+      return res
+        .status(401)
+        .json({ error: "This user is not eligible to this action" });
     }
 
     await updateOrder(chapterId, orderId);
@@ -51,17 +53,17 @@ const getAllChapterTitles = async (req, res) => {
   }
 
   try {
-    let filter = { bookId: bookId }
+    let filter = { bookId: bookId };
     if (req.user) {
       const isAuthor = await isTheAuthor(req.user._id, bookId);
-  
+
       if (!isAuthor && req.user.role !== UserRole.Admin) {
-        filter.state = { $in: [ChapterState.Finished, ChapterState.Public] }
+        filter.state = { $in: [ChapterState.Finished, ChapterState.Public] };
       }
     } else {
-      filter.state = { $in: [ChapterState.Finished, ChapterState.Public] }
+      filter.state = { $in: [ChapterState.Finished, ChapterState.Public] };
     }
-    
+
     const chapters = await Chapter.find(filter).sort({ orderId: 1 });
 
     return res.status(200).json(
@@ -84,11 +86,11 @@ const getSpecificChapter = async (req, res) => {
   }
 
   try {
-    let filter = { _id: id }
+    let filter = { _id: id };
 
     if (req.user) {
       const proceed = await canProceed(req.user._id, id);
-  
+
       if (!proceed && req.user.role !== UserRole.Admin) {
         filter.state = { $in: [ChapterState.Finished, ChapterState.Public] };
       }
@@ -139,7 +141,9 @@ const createChapter = async (req, res) => {
     const proceed = await isTheAuthor(req.user._id, bookId);
 
     if (!proceed && req.user.role !== UserRole.Admin) {
-      return res.status(401).json({ error: "This user is not eligible to this action" });
+      return res
+        .status(401)
+        .json({ error: "This user is not eligible to this action" });
     }
 
     const greatestOrderId = await Chapter.findOne(
@@ -150,7 +154,10 @@ const createChapter = async (req, res) => {
       .limit(1);
 
     let correctOrderId = orderId;
-    if (greatestOrderId && (orderId < 1 || orderId > greatestOrderId.orderId + 1)) {
+    if (
+      greatestOrderId &&
+      (orderId < 1 || orderId > greatestOrderId.orderId + 1)
+    ) {
       correctOrderId = greatestOrderId.orderId + 1;
     } else if (!greatestOrderId) {
       correctOrderId = 1;
@@ -183,67 +190,59 @@ const deleteChapter = async (req, res) => {
     const proceed = await canProceed(req.user._id, id);
 
     if (!proceed && req.user.role !== UserRole.Admin) {
-      return res.status(401).json({ error: "This user is not eligible to this action" });
+      return res
+        .status(401)
+        .json({ error: "This user is not eligible to this action" });
     }
 
     const deletedChapter = await Chapter.findByIdAndDelete(id);
 
-    const hasChapter = await Chapter.findOne({ bookId: deletedChapter.bookId });
-
-    if (hasChapter) {
-      const greatestOrderId = await Chapter.findOne(
-        { bookId: deletedChapter.bookId },
-        { orderId: 1 }
-      )
-        .sort({ orderId: -1 })
-        .limit(1);
-
-      let chapterToGet;
-
-      //If it is the last element no reordering needed
-      if (deletedChapter.orderId > greatestOrderId.orderId) {
-        chapterToGet = await Chapter.findOne({
-          bookId: deletedChapter.bookId,
-          orderId: deletedChapter.orderId - 1,
-        });
-      } else {
-        await Chapter.find({ orderId: { $gt: deletedChapter.orderId } })
-          .exec()
-          .then((chapters) => {
-            // Retrieve documents with orderId greater than value
-            console.log(chapters);
-
-            // Decrement orderId by one for each document
-            const updatedDocuments = chapters.map((chapter) => {
-              return Chapter.findByIdAndUpdate(
-                chapter._id,
-                { $inc: { orderId: -1 } },
-                { new: true }
-              );
-            });
-
-            // Execute all the update operations
-            return Promise.all(updatedDocuments);
-          })
-          .then(() => {
-            console.log("Documents updated successfully");
-          })
-          .catch((error) => {
-            console.error("Error updating documents:", error);
-          });
-
-        chapterToGet = await Chapter.findOne({
-          bookId: deletedChapter.bookId,
-          orderId: deletedChapter.orderId,
-        });
-
-        // await updateOrder(chapterToGet._id, deletedChapter.orderId);
-      }
-
-      return res.status(200).json(chapterToGet);
+    if (!deletedChapter) {
+      return res.status(200).json(null); // Chapter not found, return success with null
     }
 
-    return res.status(200).json(null);
+    const { bookId, orderId } = deletedChapter;
+
+    const greatestOrderId = await Chapter.findOne({ bookId })
+      .sort({ orderId: -1 })
+      .limit(1);
+
+    let chapterToGet;
+
+    // Check if reordering is needed
+    if (orderId <= greatestOrderId.orderId) {
+      // Find chapters with orderId greater than the deleted chapter
+      const chaptersToDecrement = await Chapter.find({
+        bookId,
+        orderId: { $gt: orderId },
+      });
+
+      // Decrement orderId by one for each chapter
+      for (const chapter of chaptersToDecrement) {
+        chapter.orderId -= 1;
+        await chapter.save();
+      }
+
+      // Get the previous chapter if it's not the last one
+      if (orderId > 1) {
+        chapterToGet = await Chapter.findOne({
+          bookId,
+          orderId: orderId - 1,
+        });
+      } else if (orderId === 1) {
+        chapterToGet = await Chapter.findOne({
+          bookId,
+          orderId: 1,
+        });
+      }
+    } else {
+      chapterToGet = await Chapter.findOne({
+        bookId,
+        orderId: orderId - 1,
+      });
+    }
+
+    return res.status(200).json(chapterToGet);
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -257,7 +256,9 @@ const updateChapter = async (req, res) => {
     const proceed = await canProceed(req.user._id, id);
 
     if (!proceed && req.user.role !== UserRole.Admin) {
-      return res.status(401).json({ error: "This user is not eligible to this action" });
+      return res
+        .status(401)
+        .json({ error: "This user is not eligible to this action" });
     }
 
     const currChapter = await Chapter.findById(id).select("bookId");
