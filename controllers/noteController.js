@@ -82,13 +82,7 @@ const getNotesByCriteria = async (req, res) => {
 const createNote = async (req, res) => {
   const { header, content, bookId, chapterId, orderId } = req.body;
 
-  try {
-    const proceed = await canProceed(req.user._id, id);
-
-    if (!proceed && req.user.role !== UserRole.Admin) {
-      return res.status(401).json({ error: "This user is not eligible to this action" });
-    }
-    
+  try {    
     const note = await Note.create({
       header,
       content,

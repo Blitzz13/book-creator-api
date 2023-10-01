@@ -18,6 +18,9 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.0.2",
     "validator": "^13.9.0",
+    "epub-parser": "^0.2.5",
+    "epub": "^1.2.1",
+    "cheerio": "^1.0.0-rc.12",
     "epub-gen-memory": "^1.0.10",
     "quill-delta-to-html": "^0.12.1"
   },
